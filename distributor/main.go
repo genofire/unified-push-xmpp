@@ -4,32 +4,17 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"errors"
 
 	"github.com/bdlm/log"
-	"github.com/godbus/dbus/v5"
+	"unifiedpush.org/go/np2p_dbus/distributor"
 )
 
+var dbus *distributor.DBus
+
 func main() {
-	conn, err := dbus.ConnectSessionBus()
-	if err != nil {
-		log.Panicf("on dbus connection: %v", err)
-	}
-	defer conn.Close()
-	log.Debug("connect to dbus")
-
-	rp, err := conn.RequestName(DBUSName, dbus.NameFlagReplaceExisting)
-	if err != nil {
-		log.Panicf("register name on dbus: %v", err)
-	}
-	if rp != dbus.RequestNameReplyPrimaryOwner {
-		log.Panicf("a other dbus service is running with %s: %v", DBUSName, rp)
-	}
-	log.Debug("register name to dbus")
-
-	d := NewDistributor(conn)
-	if err := conn.ExportAll(d, DBUSDistributorPath, DBUSDistributorInterface); err != nil {
-		log.Panicf("export distributor on %s: %v", DBUSDistributorPath, err)
-	}
+	dbus = distributor.NewDBus("org.unifiedpush.Distributor.xmpp")
+	dbus.StartHandling(handler{})
 
 	log.Info("startup")
 
@@ -38,4 +23,26 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs
 	log.Infof("received %s", sig)
+}
+
+type handler struct {
+}
+
+func (h handler) Register(appName, token string) (string,string,error) {
+	log.WithFields(map[string]interface{}{
+		"name": appName,
+		"token": token,
+	}).Info("distributor-register")
+	endpoint := "https://up.chat.sum7.eu/UP?appid="+appName+"&token="+token
+	if endpoint != "" {
+		return endpoint, "", nil
+	}
+	return "", "reason to app", errors.New("Unknown error")
+}
+func (h handler) Unregister(token string) {
+	log.WithFields(map[string]interface{}{
+		"token": token,
+	}).Info("distributor-unregister")
+	appID := ""
+	_ = dbus.NewConnector(appID).Unregistered(token)
 }
