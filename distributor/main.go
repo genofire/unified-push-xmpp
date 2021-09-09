@@ -1,11 +1,10 @@
 package main
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
 	"errors"
+	"flag"
 
+	"dev.sum7.eu/genofire/golang-lib/file"
 	"github.com/bdlm/log"
 	"unifiedpush.org/go/np2p_dbus/distributor"
 )
@@ -13,27 +12,33 @@ import (
 var dbus *distributor.DBus
 
 func main() {
+	configPath := "config.toml"
+	flag.StringVar(&configPath, "c", configPath, "path to configuration file")
+	flag.Parse()
+
+	config := &XMPPService{}
+	if err := file.ReadTOML(configPath, config); err != nil {
+		log.Panicf("open config file: %s", err)
+	}
+
 	dbus = distributor.NewDBus("org.unifiedpush.Distributor.xmpp")
 	dbus.StartHandling(handler{})
 
 	log.Info("startup")
-
-	// Wait for INT/TERM
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-sigs
-	log.Infof("received %s", sig)
+	if err := config.Run(dbus); err != nil {
+		log.Errorf("startup xmpp: %v", err)
+	}
 }
 
 type handler struct {
 }
 
-func (h handler) Register(appName, token string) (string,string,error) {
+func (h handler) Register(appName, token string) (string, string, error) {
 	log.WithFields(map[string]interface{}{
-		"name": appName,
+		"name":  appName,
 		"token": token,
 	}).Info("distributor-register")
-	endpoint := "https://up.chat.sum7.eu/UP?appid="+appName+"&token="+token
+	endpoint := "https://up.chat.sum7.eu/UP?appid=" + appName + "&token=" + token
 	if endpoint != "" {
 		return endpoint, "", nil
 	}
