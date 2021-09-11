@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	dev.sum7.eu/genofire/unified-push-xmpp/messages v0.0.0-00010101000000-000000000000 // indirect
 	github.com/bdlm/std v1.0.1 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1 // indirect
@@ -22,3 +23,5 @@ require (
 	golang.org/x/tools v0.0.0-20200103221440-774c71fcf114 // indirect
 	mellium.im/reader v0.1.0 // indirect
 )
+
+replace dev.sum7.eu/genofire/unified-push-xmpp/messages => ../messages

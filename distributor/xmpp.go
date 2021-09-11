@@ -5,15 +5,20 @@ import (
 	"crypto/tls"
 	"encoding/xml"
 	"io"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/bdlm/log"
 	"mellium.im/sasl"
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp"
-	"mellium.im/xmpp/mux"
 	"mellium.im/xmpp/jid"
+	"mellium.im/xmpp/mux"
 	"mellium.im/xmpp/stanza"
 	"unifiedpush.org/go/np2p_dbus/distributor"
+
+	"dev.sum7.eu/genofire/unified-push-xmpp/messages"
 )
 
 type XMPPService struct {
@@ -21,58 +26,76 @@ type XMPPService struct {
 	Password string
 	Gateway  string
 	dbus     *distributor.DBus
+	session *xmpp.Session
 }
 
-func (xs *XMPPService) Run(dbus *distributor.DBus) error {
-	xs.dbus = dbus
-	j := jid.MustParse(xs.Login)
-	s, err := xmpp.DialClientSession(
+func (s *XMPPService) Run(dbus *distributor.DBus) error {
+	var err error
+	s.dbus = dbus
+	j := jid.MustParse(s.Login)
+	if s.session, err = xmpp.DialClientSession(
 		context.TODO(), j,
 		xmpp.BindResource(),
 		xmpp.StartTLS(&tls.Config{
 			ServerName: j.Domain().String(),
 		}),
 		//TODO sasl.ScramSha1Plus <- problem with (my) ejabberd
-		//xmpp.SASL("", xs.Password, sasl.ScramSha1Plus, sasl.ScramSha1, sasl.Plain),
-		xmpp.SASL("", xs.Password, sasl.ScramSha1, sasl.Plain),
-	)
-	if err != nil {
+		//xmpp.SASL("", s.Password, sasl.ScramSha1Plus, sasl.ScramSha1, sasl.Plain),
+		xmpp.SASL("", s.Password, sasl.ScramSha1, sasl.Plain),
+	); err != nil {
 		return err
 	}
 	defer func() {
 		log.Info("Closing session…")
-		if err := s.Close(); err != nil {
+		if err := s.session.Close(); err != nil {
 			log.Errorf("Error closing session: %q", err)
 		}
 		log.Println("Closing conn…")
-		if err := s.Conn().Close(); err != nil {
+		if err := s.session.Conn().Close(); err != nil {
 			log.Errorf("Error closing connection: %q", err)
 		}
 	}()
 	// Send initial presence to let the server know we want to receive messages.
-	err = s.Send(context.TODO(), stanza.Presence{Type: stanza.AvailablePresence}.Wrap(nil))
+	err = s.session.Send(context.TODO(), stanza.Presence{Type: stanza.AvailablePresence}.Wrap(nil))
 	if err != nil {
 		return err
 	}
-	s.Serve(mux.New(
-		mux.MessageFunc("",xml.Name{Local: "subject"}, xs.message),
+	// Send subscripe to ask for allowing sending IQ (Register/Unregister)
+	err = s.session.Send(context.TODO(), stanza.Presence{
+		Type: stanza.SubscribePresence,
+		To: jid.MustParse(s.Gateway),
+	}.Wrap(nil))
+	if err != nil {
+		return err
+	}
+	s.session.Serve(mux.New(
+		mux.MessageFunc("", xml.Name{Local: "subject"}, s.message),
+		mux.PresenceFunc(stanza.SubscribePresence, xml.Name{}, s.autoSubscribe),
 	))
 	return nil
 }
 
-func (xs *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncoder) error {
+// autoSubscribe to allow sending IQ
+func (s *XMPPService) autoSubscribe(presHead stanza.Presence, t xmlstream.TokenReadEncoder) error {
+	log.WithField("p", presHead).Info("autoSubscribe")
+	t.Encode(stanza.Presence{
+		Type: stanza.SubscribedPresence,
+		To: presHead.From,
+	})
+	return nil
+}
+
+// handler of incoming message - forward to DBUS
+func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncoder) error {
 	d := xml.NewTokenDecoder(t)
-	msg := struct {
-		Token string `xml:"subject"`
-		Body string `xml:"body"`
-	}{}
+	msg := messages.MessageBody{}
 	err := d.Decode(&msg)
 	if err != nil && err != io.EOF {
 		log.WithField("msg", msg).Errorf("Error decoding message: %q", err)
 		return nil
 	}
 	from := msgHead.From.Bare().String()
-	if xs.Gateway == "" || from != xs.Gateway {
+	if s.Gateway == "" || from != s.Gateway {
 		log.WithField("from", from).Info("message not from gateway, that is no notification")
 		return nil
 	}
@@ -82,14 +105,65 @@ func (xs *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEnco
 		return nil
 	}
 
+	token := strings.SplitN(msg.Token, "/", 2)
+	if len(token) >= 2 {
+		log.WithField("token", msg.Token).Errorf("unable to parse token")
+		return nil
+	}
 	//TODO Lockup for appid by token in storage
-	if xs.dbus.
-		NewConnector("cc.malhotra.karmanyaah.testapp.golibrary").
-		Message(msg.Token, msg.Body, msgHead.ID) != nil {
+	if s.dbus.
+		NewConnector(token[0]).
+		Message(token[1], msg.Body, msgHead.ID) != nil {
 		log.Errorf("Error send unified push: %q", err)
 		return nil
 	}
 	log.Infof("recieve unified push: %v", msg)
 
 	return nil
+}
+// Register handler of DBUS Distribution
+func (s *XMPPService) Register(appName, token string) (string, string, error) {
+	logger := log.WithFields(map[string]interface{}{
+		"name":  appName,
+		"token": token,
+	})
+	iq := messages.RegisterIQ{
+		IQ: stanza.IQ{
+			Type: stanza.SetIQ,
+			To: jid.MustParse(s.Gateway),
+		},
+	}
+	externalToken := fmt.Sprintf("%s/%s", appName, token)
+	iq.Register.Token = &messages.TokenData{ Body: externalToken }
+	t, err := s.session.EncodeIQ(context.TODO(), iq)
+	if err != nil {
+		logger.Errorf("xmpp send IQ for register: %v", err)
+		return "", "xmpp unable send iq to gateway", err
+	}
+	d := xml.NewTokenDecoder(t)
+	iqRegister := messages.RegisterIQ{}
+	if err := d.Decode(&iqRegister); err != nil {
+		logger.Errorf("xmpp recv IQ for register: %v", err)
+		return "", "xmpp unable recv iq to gateway", err
+	}
+	if endpoint := iqRegister.Register.Endpoint; endpoint != nil {
+		logger.WithField("endpoint", endpoint.Body).Info("success")
+		return endpoint.Body, "", nil
+	}
+	errStr := "Unknown Error"
+	if errr := iqRegister.Register.Error; errr != nil {
+		errStr = errr.Body
+	}
+	err = errors.New(errStr)
+	logger.WithField("error", err).Error("unable to register")
+	return "", errStr, err
+}
+
+// Unregister handler of DBUS Distribution
+func (xs *XMPPService) Unregister(token string) {
+	log.WithFields(map[string]interface{}{
+		"token": token,
+	}).Info("distributor-unregister")
+	appID := ""
+	_ = xs.dbus.NewConnector(appID).Unregistered(token)
 }

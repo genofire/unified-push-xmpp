@@ -22,7 +22,7 @@ func main() {
 	}
 
 	dbus = distributor.NewDBus("org.unifiedpush.Distributor.xmpp")
-	dbus.StartHandling(handler{})
+	dbus.StartHandling(config)
 
 	log.Info("startup")
 	if err := config.Run(dbus); err != nil {
