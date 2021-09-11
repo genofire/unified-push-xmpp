@@ -25,3 +25,5 @@ require (
 )
 
 replace dev.sum7.eu/genofire/unified-push-xmpp/messages => ../messages
+
+replace mellium.im/xmpp => ../../../../mellium.im/xmpp

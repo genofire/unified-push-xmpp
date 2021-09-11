@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/xml"
-	"io"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/bdlm/log"
@@ -26,7 +26,7 @@ type XMPPService struct {
 	Password string
 	Gateway  string
 	dbus     *distributor.DBus
-	session *xmpp.Session
+	session  *xmpp.Session
 }
 
 func (s *XMPPService) Run(dbus *distributor.DBus) error {
@@ -60,28 +60,9 @@ func (s *XMPPService) Run(dbus *distributor.DBus) error {
 	if err != nil {
 		return err
 	}
-	// Send subscripe to ask for allowing sending IQ (Register/Unregister)
-	err = s.session.Send(context.TODO(), stanza.Presence{
-		Type: stanza.SubscribePresence,
-		To: jid.MustParse(s.Gateway),
-	}.Wrap(nil))
-	if err != nil {
-		return err
-	}
 	s.session.Serve(mux.New(
 		mux.MessageFunc("", xml.Name{Local: "subject"}, s.message),
-		mux.PresenceFunc(stanza.SubscribePresence, xml.Name{}, s.autoSubscribe),
 	))
-	return nil
-}
-
-// autoSubscribe to allow sending IQ
-func (s *XMPPService) autoSubscribe(presHead stanza.Presence, t xmlstream.TokenReadEncoder) error {
-	log.WithField("p", presHead).Info("autoSubscribe")
-	t.Encode(stanza.Presence{
-		Type: stanza.SubscribedPresence,
-		To: presHead.From,
-	})
 	return nil
 }
 
@@ -121,6 +102,7 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 
 	return nil
 }
+
 // Register handler of DBUS Distribution
 func (s *XMPPService) Register(appName, token string) (string, string, error) {
 	logger := log.WithFields(map[string]interface{}{
@@ -130,11 +112,11 @@ func (s *XMPPService) Register(appName, token string) (string, string, error) {
 	iq := messages.RegisterIQ{
 		IQ: stanza.IQ{
 			Type: stanza.SetIQ,
-			To: jid.MustParse(s.Gateway),
+			To:   jid.MustParse(s.Gateway),
 		},
 	}
 	externalToken := fmt.Sprintf("%s/%s", appName, token)
-	iq.Register.Token = &messages.TokenData{ Body: externalToken }
+	iq.Register.Token = &messages.TokenData{Body: externalToken}
 	t, err := s.session.EncodeIQ(context.TODO(), iq)
 	if err != nil {
 		logger.Errorf("xmpp send IQ for register: %v", err)
