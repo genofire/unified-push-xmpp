@@ -21,6 +21,8 @@ type XMPPService struct {
 	Addr    string `toml:"address"`
 	JID     string `toml:"jid"`
 	Secret  string `toml:"secret"`
+	// hidden here for beautiful config file
+	EndpointURL  string `toml:"-"`
 	session *xmpp.Session
 }
 
@@ -100,7 +102,7 @@ func (s *XMPPService) handleRegister(iq stanza.IQ, t xmlstream.TokenReadEncoder,
 		reply.Register.Error = &messages.ErrorData{Body: "no token"}
 		return nil
 	}
-	endpoint := "https://localhost/UP?token=" + token + "&to=" + iq.From.String()
+	endpoint := s.EndpointURL+"/UP?token=" + token + "&to=" + iq.From.String()
 	reply.IQ.Type = stanza.ResultIQ
 	reply.Register.Endpoint = &messages.EndpointData{Body: endpoint}
 	log.Infof("generate respone: %v", endpoint)
@@ -144,6 +146,10 @@ func (s *XMPPService) handleDisco(iq stanza.IQ, t xmlstream.TokenReadEncoder, st
 
 // SendMessage of an UP Notification
 func (s *XMPPService) SendMessage(to, token, content string) error {
+	log.WithFields(map[string]interface{}{
+		"to": to,
+		"token": token,
+	}).Info("forward message to xmpp")
 	return s.session.Encode(context.TODO(), messages.Message{
 		Message: stanza.Message{
 			To:   jid.MustParse(to),

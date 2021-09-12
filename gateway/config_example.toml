@@ -1,0 +1,18 @@
+endpoint_url = "https://up.chat.sum7.eu"
+
+[webserver]
+listen = ":8080"
+access_log = true
+webroot = ""
+
+# if ACME / Let's Encrypt used, uncomment listen
+[webserver.acme]
+enable = false
+domains = ["example1.com", "example2.com"]
+cache = "/var/www/.cache"
+
+
+[xmpp]
+address =  "[::1]:5347"
+jid     =  "up.chat.sum7.eu"
+secret  =  "CHANGEME"

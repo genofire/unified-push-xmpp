@@ -87,7 +87,7 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 	}
 
 	token := strings.SplitN(msg.Token, "/", 2)
-	if len(token) >= 2 {
+	if len(token) != 2  {
 		log.WithField("token", msg.Token).Errorf("unable to parse token")
 		return nil
 	}
