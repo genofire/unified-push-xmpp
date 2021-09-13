@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"dev.sum7.eu/genofire/golang-lib/web"
 	"dev.sum7.eu/genofire/golang-lib/web/api/status"
 	"dev.sum7.eu/genofire/golang-lib/web/metrics"
+	"github.com/gin-gonic/gin"
 )
 
 // Bind to webservice
@@ -18,13 +18,13 @@ import (
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name Authorization
-func Bind(xmpp *XMPPService) web.ModuleRegisterFunc {
+func Bind(xmpp *XMPPService, jwt JWTSecret) web.ModuleRegisterFunc {
 	return func(r *gin.Engine, ws *web.Service) {
 		// docs.Bind(r, ws)
 
 		status.Register(r, ws)
 		metrics.Register(r, ws)
 		Get(r, ws)
-		Post(r, ws, xmpp)
+		Post(r, ws, xmpp, jwt)
 	}
 }

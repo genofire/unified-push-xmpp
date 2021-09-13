@@ -13,9 +13,10 @@ import (
 var VERSION = "development"
 
 type configData struct {
-	EndpointURL string `toml:"endpoint_url"`
-	XMPP      XMPPService `toml:"xmpp"`
-	Webserver web.Service `toml:"webserver"`
+	JWTSecret   JWTSecret   `toml"jwt_secret"`
+	EndpointURL string      `toml:"endpoint_url"`
+	XMPP        XMPPService `toml:"xmpp"`
+	Webserver   web.Service `toml:"webserver"`
 }
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 	}
 	// just for more beautiful config file - jere
 	config.XMPP.EndpointURL = config.EndpointURL
+	config.XMPP.JWTSecret = config.JWTSecret
 
 	go func() {
 		if err := config.XMPP.Run(); err != nil {
@@ -49,7 +51,7 @@ func main() {
 		}
 	}()
 
-	config.Webserver.ModuleRegister(Bind(&config.XMPP))
+	config.Webserver.ModuleRegister(Bind(&config.XMPP, config.JWTSecret))
 
 	log.Info("startup")
 	if err := config.Webserver.Run(); err != nil {
