@@ -15,7 +15,7 @@ Request for Register
 ```xml
 <iq from="push-distributer@example.org/device" to="up.chat.sum7.eu" type="set" id="register-id">
   <register xmlns='unifiedpush.org'>
-    <token>token-from-distributer-regisration</token>
+    <token>pubic-token</token>
   </register>
 </iq>
 ```
@@ -26,7 +26,7 @@ on success:
 ```xml
 <iq from="push-distributer@example.org/device" to="up.chat.sum7.eu" type="result" id="register-id">
   <register xmlns='unifiedpush.org'>
-    <endpoint>https://an-endpoint-for-application-server.localhost/UP?token=public-token</endpoint>
+    <endpoint>https://an-endpoint-for-application-server.localhost/UP?token=endpoint-token</endpoint>
   </register>
 </iq>
 ```
@@ -49,7 +49,7 @@ For the push notification it-self the origin `<message/>` is used with following
 
 ```xml
 <message from="up.chat.sum7.eu" to="push-distributer@example.org/device" id="message-id">
-  <subject>token-from-distributer-regisration</subject>
+  <subject>public-token</subject>
   <body>Here is the Notification content</body>
 </message>
 ```

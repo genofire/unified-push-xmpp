@@ -11,27 +11,27 @@ type JWTSecret string
 // JWTToken data field
 type JWTToken struct {
 	jwt.StandardClaims
-	Token string `json:"token"`
-	JID   string `json:"jid"`
+	PublicToken string `json:"token"`
+	JID         string `json:"jid"`
 }
 
-// Generate an jwt token by token and jid
-func (s JWTSecret) Generate(jid jid.JID, token string) (string, error) {
+// Generate an endpoint token by public token and jid
+func (s JWTSecret) Generate(jid jid.JID, publicToken string) (string, error) {
 	jwtToken := JWTToken{
-		Token: token,
-		JID:   jid.String(),
+		PublicToken: publicToken,
+		JID:         jid.String(),
 	}
 	claim := jwt.NewWithClaims(jwt.SigningMethodHS512, jwtToken)
-	t, err := claim.SignedString([]byte(s))
+	endpointToken, err := claim.SignedString([]byte(s))
 	if err != nil {
 		return "", err
 	}
-	return t, nil
+	return endpointToken, nil
 }
 
-// Read token to token and jid
-func (s JWTSecret) Read(jwtToken string) (jid.JID, string, error) {
-	token, err := jwt.ParseWithClaims(jwtToken, &JWTToken{}, func(token *jwt.Token) (interface{}, error) {
+// Read endpoint token to public token and jid
+func (s JWTSecret) Read(endpointToken string) (jid.JID, string, error) {
+	token, err := jwt.ParseWithClaims(endpointToken, &JWTToken{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s), nil
 	})
 	if err != nil {
@@ -45,5 +45,5 @@ func (s JWTSecret) Read(jwtToken string) (jid.JID, string, error) {
 	if err != nil {
 		return jid.JID{}, "", err
 	}
-	return addr, claims.Token, nil
+	return addr, claims.PublicToken, nil
 }

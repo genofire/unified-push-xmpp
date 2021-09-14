@@ -88,16 +88,16 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 		return nil
 	}
 
-	if msg.Body == "" || msg.Token == "" {
+	if msg.Body == "" || msg.PublicToken == "" {
 		log.Infof("empty: %v", msgHead)
 		return nil
 	}
 	logger = logger.WithFields(map[string]interface{}{
-		"publicToken": msg.Token,
+		"publicToken": msg.PublicToken,
 		"content":     msg.Body,
 	})
 
-	conn := s.store.GetConnectionbyPublic(msg.Token)
+	conn := s.store.GetConnectionbyPublic(msg.PublicToken)
 	if conn == nil {
 		logger.Warnf("no appID and appToken found for publicToken")
 	}

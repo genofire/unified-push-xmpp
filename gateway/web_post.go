@@ -1,16 +1,17 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 
 	"dev.sum7.eu/genofire/golang-lib/web"
 )
 
 func Post(r *gin.Engine, ws *web.Service, xmpp *XMPPService, jwtsecret JWTSecret) {
 	r.POST("/UP", func(c *gin.Context) {
-		to, token, err := jwtsecret.Read(c.Query("token"))
+		to, publicToken, err := jwtsecret.Read(c.Query("token"))
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, web.HTTPError{
 				Message: "jwt token unauthoried - or not given",
@@ -27,7 +28,7 @@ func Post(r *gin.Engine, ws *web.Service, xmpp *XMPPService, jwtsecret JWTSecret
 			return
 		}
 		content := string(b)
-		if err := xmpp.SendMessage(to, token, content); err != nil {
+		if err := xmpp.SendMessage(to, publicToken, content); err != nil {
 			c.JSON(http.StatusNotFound, web.HTTPError{
 				Message: "unable to forward to xmpp",
 				Error:   err.Error(),

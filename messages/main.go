@@ -25,6 +25,7 @@ type RegisterIQ struct {
 	} `xml:"register"`
 }
 
+// TokenData transport the public token from distributor to gateway
 type TokenData struct {
 	XMLName xml.Name `xml:"token"`
 	Body    string   `xml:",chardata"`
@@ -49,7 +50,7 @@ type UnregisterIQ struct {
 // Unregister without stanza
 type Unregister struct {
 	XMLName xml.Name `xml:"unifiedpush.org unregister"`
-	// set
+	// set - public token
 	Token string `xml:"token,omitempty"`
 	// result
 	Success *string `xml:"success,omitempty"`
@@ -60,12 +61,12 @@ type Unregister struct {
 // Message of push notification - with stanza
 type Message struct {
 	stanza.Message
-	Token string `xml:"subject"`
-	Body  string `xml:"body"`
+	PublicToken string `xml:"subject"`
+	Body        string `xml:"body"`
 }
 
 // MessageBody of push notification - without stanza
 type MessageBody struct {
-	Token string `xml:"subject"`
-	Body  string `xml:"body"`
+	PublicToken string `xml:"subject"`
+	Body        string `xml:"body"`
 }

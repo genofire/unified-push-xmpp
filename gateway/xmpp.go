@@ -86,19 +86,19 @@ func (s *XMPPService) handleRegister(iq stanza.IQ, t xmlstream.TokenReadEncoder,
 		reply.Register.Error = &messages.ErrorData{Body: "unable decode"}
 		return nil
 	}
-	token := tokenData.Body
-	if token == "" {
-		log.Warnf("no token found: %v", token)
+	publicToken := tokenData.Body
+	if publicToken == "" {
+		log.Warnf("no token found: %v", publicToken)
 		reply.Register.Error = &messages.ErrorData{Body: "no token"}
 		return nil
 	}
-	jwt, err := s.JWTSecret.Generate(iq.From, token)
+	endpointToken, err := s.JWTSecret.Generate(iq.From, publicToken)
 	if err != nil {
-		log.Errorf("unable jwt generation: %v", err)
-		reply.Register.Error = &messages.ErrorData{Body: "jwt error on gateway"}
+		log.Errorf("unable entpointToken generation: %v", err)
+		reply.Register.Error = &messages.ErrorData{Body: "endpointToken error on gateway"}
 		return nil
 	}
-	endpoint := s.EndpointURL + "/UP?token=" + jwt
+	endpoint := s.EndpointURL + "/UP?token=" + endpointToken
 	reply.IQ.Type = stanza.ResultIQ
 	reply.Register.Endpoint = &messages.EndpointData{Body: endpoint}
 	log.Debugf("generate respone: %v", endpoint)
@@ -141,10 +141,10 @@ func (s *XMPPService) handleDisco(iq stanza.IQ, t xmlstream.TokenReadEncoder, st
 }
 
 // SendMessage of an UP Notification
-func (s *XMPPService) SendMessage(to jid.JID, token, content string) error {
+func (s *XMPPService) SendMessage(to jid.JID, publicToken, content string) error {
 	log.WithFields(map[string]interface{}{
-		"to":    to.String(),
-		"token": token,
+		"to":          to.String(),
+		"publicToken": publicToken,
 	}).Debug("forward message to xmpp")
 	return s.session.Encode(context.TODO(), messages.Message{
 		Message: stanza.Message{
@@ -153,7 +153,7 @@ func (s *XMPPService) SendMessage(to jid.JID, token, content string) error {
 			// Type: stanza.ChatMessage,
 			Type: stanza.NormalMessage,
 		},
-		Token: token,
-		Body:  content,
+		PublicToken: publicToken,
+		Body:        content,
 	})
 }
