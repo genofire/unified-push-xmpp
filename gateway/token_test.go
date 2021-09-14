@@ -16,10 +16,10 @@ func TestJWT(t *testing.T) {
 	secret := JWTSecret("CHANGEME")
 	jwt, err := secret.Generate(jid.MustParse(addr), token)
 	assert.NoError(err)
-	assert.NoEqual("", jwt)
+	assert.NotEqual("", jwt)
 
-	jid, t, err := secret.Read(jwt)
+	jid, iToken, err := secret.Read(jwt)
 	assert.NoError(err)
 	assert.Equal(addr, jid.String())
-	assert.Equal(t, token)
+	assert.Equal(iToken, token)
 }
