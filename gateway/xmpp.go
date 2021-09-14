@@ -42,20 +42,15 @@ func (s *XMPPService) Run() error {
 		return err
 	}
 	defer func() {
-		log.Info("Closing session…")
+		log.Info("closing xmpp connection")
 		if err := s.session.Close(); err != nil {
 			log.Errorf("Error closing session: %q", err)
 		}
-		log.Println("Closing conn…")
+		log.Info("closing xmpp connection")
 		if err := s.session.Conn().Close(); err != nil {
 			log.Errorf("Error closing connection: %q", err)
 		}
 	}()
-	/* Send initial presence to let the server know we want to receive messages.
-	err = s.session.Send(context.TODO(), stanza.Presence{Type: stanza.AvailablePresence}.Wrap(nil))
-	if err != nil {
-		return err
-	}*/
 	log.Infof("connected with %s", s.session.LocalAddr())
 	return s.session.Serve(mux.New(
 		// register - get + set
@@ -66,12 +61,6 @@ func (s *XMPPService) Run() error {
 		mux.IQFunc(stanza.GetIQ, xml.Name{Local: messages.LocalUnregister, Space: messages.Space}, s.handleUnregister),
 		// mux.IQFunc("", xml.Name{}, s.handleDisco),
 	))
-	/* -
-	return s.session.Serve(xmpp.HandlerFunc(func(t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
-		log.Info(start)
-		return nil
-	}))
-	*/
 }
 
 func (s *XMPPService) handleRegister(iq stanza.IQ, t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
@@ -93,13 +82,13 @@ func (s *XMPPService) handleRegister(iq stanza.IQ, t xmlstream.TokenReadEncoder,
 	tokenData := messages.TokenData{}
 	err := xml.NewTokenDecoder(t).Decode(&tokenData)
 	if err != nil && err != io.EOF {
-		log.Errorf("decoding message: %q", err)
+		log.Warnf("decoding message: %q", err)
 		reply.Register.Error = &messages.ErrorData{Body: "unable decode"}
 		return nil
 	}
 	token := tokenData.Body
 	if token == "" {
-		log.Errorf("no token found: %v", token)
+		log.Warnf("no token found: %v", token)
 		reply.Register.Error = &messages.ErrorData{Body: "no token"}
 		return nil
 	}
@@ -112,7 +101,7 @@ func (s *XMPPService) handleRegister(iq stanza.IQ, t xmlstream.TokenReadEncoder,
 	endpoint := s.EndpointURL + "/UP?token=" + jwt
 	reply.IQ.Type = stanza.ResultIQ
 	reply.Register.Endpoint = &messages.EndpointData{Body: endpoint}
-	log.Infof("generate respone: %v", endpoint)
+	log.Debugf("generate respone: %v", endpoint)
 	return nil
 }
 func (s *XMPPService) handleUnregister(iq stanza.IQ, t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
@@ -129,7 +118,7 @@ func (s *XMPPService) handleUnregister(iq stanza.IQ, t xmlstream.TokenReadEncode
 			log.Errorf("sending unregister response: %v", err)
 		}
 	}()
-	log.Infof("unregistered unhandled: %v", start)
+	log.Debugf("unregistered unhandled: %v", start)
 
 	reply.Unregister.Error = "not implemented"
 	return nil
@@ -147,16 +136,16 @@ func (s *XMPPService) handleDisco(iq stanza.IQ, t xmlstream.TokenReadEncoder, st
 			log.Errorf("sending response: %v", err)
 		}
 	}()
-	log.Infof("recieved iq: %v", iq)
+	log.Debugf("recieved iq: %v", iq)
 	return nil
 }
 
 // SendMessage of an UP Notification
 func (s *XMPPService) SendMessage(to jid.JID, token, content string) error {
 	log.WithFields(map[string]interface{}{
-		"to":    to,
+		"to":    to.String(),
 		"token": token,
-	}).Info("forward message to xmpp")
+	}).Debug("forward message to xmpp")
 	return s.session.Encode(context.TODO(), messages.Message{
 		Message: stanza.Message{
 			To:   to,

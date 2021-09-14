@@ -1,8 +1,13 @@
 endpoint_url = "https://up.chat.sum7.eu"
+jwt_secret = "CHANGEME"
+
+[log]
+level = 40
+timestamp = false
 
 [webserver]
 listen = ":8080"
-access_log = true
+access_log = false
 webroot = ""
 
 # if ACME / Let's Encrypt used, uncomment listen

@@ -8,6 +8,7 @@ import (
 	apiStatus "dev.sum7.eu/genofire/golang-lib/web/api/status"
 	webM "dev.sum7.eu/genofire/golang-lib/web/metrics"
 	"github.com/bdlm/log"
+	"github.com/bdlm/std/logger"
 )
 
 var VERSION = "development"
@@ -17,6 +18,10 @@ type configData struct {
 	EndpointURL string      `toml:"endpoint_url"`
 	XMPP        XMPPService `toml:"xmpp"`
 	Webserver   web.Service `toml:"webserver"`
+	Log         struct {
+		Level     uint32 `toml:"level"`
+		Timestamp bool   `toml:"timestamp"`
+	} `toml:"log"`
 }
 
 func main() {
@@ -41,6 +46,12 @@ func main() {
 	if err := file.ReadTOML(configPath, config); err != nil {
 		log.Panicf("open config file: %s", err)
 	}
+
+	log.SetLevel(logger.Level(config.Log.Level))
+	log.SetFormatter(&log.TextFormatter{
+		DisableTimestamp: !config.Log.Timestamp,
+	})
+
 	// just for more beautiful config file - jere
 	config.XMPP.EndpointURL = config.EndpointURL
 	config.XMPP.JWTSecret = config.JWTSecret
