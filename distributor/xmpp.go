@@ -46,13 +46,13 @@ func (s *XMPPService) Run(dbus *distributor.DBus) error {
 		return err
 	}
 	defer func() {
-		log.Info("Closing session…")
+		log.Info("closing session")
 		if err := s.session.Close(); err != nil {
-			log.Errorf("Error closing session: %q", err)
+			log.Errorf("error closing session: %q", err)
 		}
-		log.Println("Closing conn…")
+		log.Println("closing connection")
 		if err := s.session.Conn().Close(); err != nil {
-			log.Errorf("Error closing connection: %q", err)
+			log.Errorf("error closing connection: %q", err)
 		}
 	}()
 	// Send initial presence to let the server know we want to receive messages.
@@ -68,11 +68,16 @@ func (s *XMPPService) Run(dbus *distributor.DBus) error {
 
 // handler of incoming message - forward to DBUS
 func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncoder) error {
+	logger := log.WithFields(map[string]interface{}{
+		"to":   msgHead.To.String(),
+		"from": msgHead.From.String(),
+		"id":   msgHead.ID,
+	})
 	d := xml.NewTokenDecoder(t)
 	msg := messages.MessageBody{}
 	err := d.Decode(&msg)
 	if err != nil && err != io.EOF {
-		log.WithField("msg", msg).Errorf("Error decoding message: %q", err)
+		log.WithField("msg", msg).Errorf("error decoding message: %q", err)
 		return nil
 	}
 	from := msgHead.From.Bare().String()
@@ -85,20 +90,30 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 		log.Infof("empty: %v", msgHead)
 		return nil
 	}
+	logger = logger.WithFields(map[string]interface{}{
+		"externalToken": msg.Token,
+		"content":       msg.Body,
+	})
 
+	//TODO Lockup for appid by token in storage
 	token := strings.SplitN(msg.Token, "/", 2)
-	if len(token) != 2  {
+	if len(token) != 2 {
 		log.WithField("token", msg.Token).Errorf("unable to parse token")
 		return nil
 	}
-	//TODO Lockup for appid by token in storage
+	appID := token[0]
+	internalToken := token[1]
+	logger = logger.WithFields(map[string]interface{}{
+		"appID":         appID,
+		"internalToken": internalToken,
+	})
 	if s.dbus.
-		NewConnector(token[0]).
-		Message(token[1], msg.Body, msgHead.ID) != nil {
-		log.Errorf("Error send unified push: %q", err)
+		NewConnector(appID).
+		Message(internalToken, msg.Body, msgHead.ID) != nil {
+		logger.Errorf("Error send unified push: %q", err)
 		return nil
 	}
-	log.Infof("recieve unified push: %v", msg)
+	logger.Infof("recieve unified push")
 
 	return nil
 }
