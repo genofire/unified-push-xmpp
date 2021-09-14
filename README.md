@@ -59,6 +59,6 @@ The message sender `from` should be validated from distributor, for not recievin
 ## Wordings
 
 We are using over the complete system three kind of **tokens**:
-- **Public Token** which is part of the *Endpoint* and is for using between Gateway and Application-Server
-- **External Token** which is used between Gateway and Distributor
-- **Internal Token** which is used between Distributor and Application
+- **Endpoint Token** which is part of the *Endpoint* and is for using between Gateway and Application-Server
+- **Public Token** which is used between Gateway and Distributor
+- **App Token** which is used between Distributor and Application

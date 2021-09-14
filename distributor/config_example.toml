@@ -1,3 +1,7 @@
+# if not given placed in XDG_CONFIG_HOME/unifiedpushxmpp/database.db
+storage_path = ""
+
+[xmpp]
 login = "YOUR-ACCOUNT@chat.sum7.eu"
 password = "CHANGEME"
 gateway = "up.chat.sum7.eu"

@@ -1,53 +1,60 @@
 package main
 
 import (
-	"errors"
 	"flag"
+	"os"
+	"path/filepath"
 
 	"dev.sum7.eu/genofire/golang-lib/file"
 	"github.com/bdlm/log"
 	"unifiedpush.org/go/np2p_dbus/distributor"
+	"unifiedpush.org/go/np2p_dbus/storage"
 )
 
 var dbus *distributor.DBus
 
+type configData struct {
+	StoragePath string      `toml"storage_path"`
+	XMPP        XMPPService `toml:"xmpp"`
+}
+
+func defaultPath(given, filename string) string {
+	if given != "" {
+		return given
+	}
+	basedir := os.Getenv("XDG_CONFIG_HOME")
+	if len(basedir) == 0 {
+		basedir = os.Getenv("HOME")
+		if len(basedir) == 0 {
+			basedir = "./" // FIXME: set to cwd if dunno wth is going on
+		}
+		basedir = filepath.Join(basedir, ".config")
+	}
+	basedir = filepath.Join(basedir, "unifiedpushxmpp")
+	os.MkdirAll(basedir, 0o700)
+	return filepath.Join(basedir, filename)
+}
+
 func main() {
-	configPath := "config.toml"
+	configPath := ""
 	flag.StringVar(&configPath, "c", configPath, "path to configuration file")
 	flag.Parse()
 
-	config := &XMPPService{}
-	if err := file.ReadTOML(configPath, config); err != nil {
+	config := &configData{}
+	if err := file.ReadTOML(defaultPath(configPath, "config.toml"), config); err != nil {
 		log.Panicf("open config file: %s", err)
 	}
 
+	store, err := storage.InitStorage(defaultPath(config.StoragePath, "database.db"))
+	if err != nil {
+		log.Panicf("open storage: %s", err)
+	}
+
 	dbus = distributor.NewDBus("org.unifiedpush.Distributor.xmpp")
-	dbus.StartHandling(config)
+	dbus.StartHandling(&config.XMPP)
 
 	log.Info("startup")
-	if err := config.Run(dbus); err != nil {
+	if err := config.XMPP.Run(dbus, store); err != nil {
 		log.Errorf("startup xmpp: %v", err)
 	}
-}
-
-type handler struct {
-}
-
-func (h handler) Register(appName, token string) (string, string, error) {
-	log.WithFields(map[string]interface{}{
-		"name":  appName,
-		"token": token,
-	}).Info("distributor-register")
-	endpoint := "https://up.chat.sum7.eu/UP?appid=" + appName + "&token=" + token
-	if endpoint != "" {
-		return endpoint, "", nil
-	}
-	return "", "reason to app", errors.New("Unknown error")
-}
-func (h handler) Unregister(token string) {
-	log.WithFields(map[string]interface{}{
-		"token": token,
-	}).Info("distributor-unregister")
-	appID := ""
-	_ = dbus.NewConnector(appID).Unregistered(token)
 }

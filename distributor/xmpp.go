@@ -5,11 +5,10 @@ import (
 	"crypto/tls"
 	"encoding/xml"
 	"errors"
-	"fmt"
 	"io"
-	"strings"
 
 	"github.com/bdlm/log"
+	"github.com/google/uuid"
 	"mellium.im/sasl"
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp"
@@ -17,6 +16,7 @@ import (
 	"mellium.im/xmpp/mux"
 	"mellium.im/xmpp/stanza"
 	"unifiedpush.org/go/np2p_dbus/distributor"
+	"unifiedpush.org/go/np2p_dbus/storage"
 
 	"dev.sum7.eu/genofire/unified-push-xmpp/messages"
 )
@@ -27,11 +27,13 @@ type XMPPService struct {
 	Gateway  string
 	dbus     *distributor.DBus
 	session  *xmpp.Session
+	store    *storage.Storage
 }
 
-func (s *XMPPService) Run(dbus *distributor.DBus) error {
+func (s *XMPPService) Run(dbus *distributor.DBus, store *storage.Storage) error {
 	var err error
 	s.dbus = dbus
+	s.store = store
 	j := jid.MustParse(s.Login)
 	if s.session, err = xmpp.DialClientSession(
 		context.TODO(), j,
@@ -91,25 +93,21 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 		return nil
 	}
 	logger = logger.WithFields(map[string]interface{}{
-		"externalToken": msg.Token,
-		"content":       msg.Body,
+		"publicToken": msg.Token,
+		"content":     msg.Body,
 	})
 
-	//TODO Lockup for appid by token in storage
-	token := strings.SplitN(msg.Token, "/", 2)
-	if len(token) != 2 {
-		log.WithField("token", msg.Token).Errorf("unable to parse token")
-		return nil
+	conn := s.store.GetConnectionbyPublic(msg.Token)
+	if conn == nil {
+		logger.Warnf("no appID and appToken found for publicToken")
 	}
-	appID := token[0]
-	internalToken := token[1]
 	logger = logger.WithFields(map[string]interface{}{
-		"appID":         appID,
-		"internalToken": internalToken,
+		"appID":    conn.AppID,
+		"appToken": conn.AppToken,
 	})
 	if s.dbus.
-		NewConnector(appID).
-		Message(internalToken, msg.Body, msgHead.ID) != nil {
+		NewConnector(conn.AppID).
+		Message(conn.AppToken, msg.Body, msgHead.ID) != nil {
 		logger.Errorf("Error send unified push: %q", err)
 		return nil
 	}
@@ -119,10 +117,12 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 }
 
 // Register handler of DBUS Distribution
-func (s *XMPPService) Register(appName, token string) (string, string, error) {
+func (s *XMPPService) Register(appID, appToken string) (string, string, error) {
+	publicToken := uuid.New().String()
 	logger := log.WithFields(map[string]interface{}{
-		"name":  appName,
-		"token": token,
+		"appID":       appID,
+		"appToken":    appToken,
+		"publicToken": publicToken,
 	})
 	iq := messages.RegisterIQ{
 		IQ: stanza.IQ{
@@ -130,8 +130,7 @@ func (s *XMPPService) Register(appName, token string) (string, string, error) {
 			To:   jid.MustParse(s.Gateway),
 		},
 	}
-	externalToken := fmt.Sprintf("%s/%s", appName, token)
-	iq.Register.Token = &messages.TokenData{Body: externalToken}
+	iq.Register.Token = &messages.TokenData{Body: publicToken}
 	t, err := s.session.EncodeIQ(context.TODO(), iq)
 	if err != nil {
 		logger.Errorf("xmpp send IQ for register: %v", err)
@@ -150,7 +149,9 @@ func (s *XMPPService) Register(appName, token string) (string, string, error) {
 	}
 	if endpoint := iqRegister.Register.Endpoint; endpoint != nil {
 		logger.WithField("endpoint", endpoint.Body).Info("success")
-		return endpoint.Body, "", nil
+		// update Endpoint
+		conn := s.store.NewConnectionWithToken(appID, appToken, publicToken, endpoint.Body)
+		return conn.Endpoint, "", nil
 	}
 	errStr := "Unknown Error"
 	if errr := iqRegister.Register.Error; errr != nil {
@@ -163,9 +164,12 @@ func (s *XMPPService) Register(appName, token string) (string, string, error) {
 
 // Unregister handler of DBUS Distribution
 func (xs *XMPPService) Unregister(token string) {
+	conn, _ := xs.store.DeleteConnection(token)
 	log.WithFields(map[string]interface{}{
-		"token": token,
+		"appID":       conn.AppID,
+		"appToken":    conn.AppToken,
+		"publicToken": conn.PublicToken,
+		"endpoint":    conn.Endpoint,
 	}).Info("distributor-unregister")
-	appID := ""
-	_ = xs.dbus.NewConnector(appID).Unregistered(token)
+	_ = xs.dbus.NewConnector(conn.AppID).Unregistered(conn.AppToken)
 }
