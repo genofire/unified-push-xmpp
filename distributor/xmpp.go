@@ -122,14 +122,15 @@ func (s *XMPPService) Register(appName, token string) (string, string, error) {
 		logger.Errorf("xmpp send IQ for register: %v", err)
 		return "", "xmpp unable send iq to gateway", err
 	}
+	defer func() {
+		if err := t.Close(); err != nil {
+			logger.Errorf("unable to close registration response %v", err)
+		}
+	}()
 	d := xml.NewTokenDecoder(t)
 	iqRegister := messages.RegisterIQ{}
 	if err := d.Decode(&iqRegister); err != nil {
 		logger.Errorf("xmpp recv IQ for register: %v", err)
-		return "", "xmpp unable recv iq to gateway", err
-	}
-	if err := t.Close(); err != nil {
-		logger.Errorf("unable to close registration response %v", err)
 		return "", "xmpp unable recv iq to gateway", err
 	}
 	if endpoint := iqRegister.Register.Endpoint; endpoint != nil {
