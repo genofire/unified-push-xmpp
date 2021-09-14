@@ -128,6 +128,10 @@ func (s *XMPPService) Register(appName, token string) (string, string, error) {
 		logger.Errorf("xmpp recv IQ for register: %v", err)
 		return "", "xmpp unable recv iq to gateway", err
 	}
+	if err := t.Close(); err != nil {
+		logger.Errorf("unable to close registration response %v", err)
+		return "", "xmpp unable recv iq to gateway", err
+	}
 	if endpoint := iqRegister.Register.Endpoint; endpoint != nil {
 		logger.WithField("endpoint", endpoint.Body).Info("success")
 		return endpoint.Body, "", nil
