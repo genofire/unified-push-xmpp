@@ -12,6 +12,7 @@ import (
 	"mellium.im/sasl"
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp"
+	"mellium.im/xmpp/disco"
 	"mellium.im/xmpp/jid"
 	"mellium.im/xmpp/mux"
 	"mellium.im/xmpp/stanza"
@@ -62,7 +63,9 @@ func (s *XMPPService) Run(dbus *distributor.DBus, store *storage.Storage) error 
 	if err != nil {
 		return err
 	}
+	go s.checkServer()
 	s.session.Serve(mux.New(
+		// disco.Handle(),
 		mux.MessageFunc("", xml.Name{Local: "subject"}, s.message),
 	))
 	return nil
@@ -113,6 +116,28 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 	}
 	logger.Infof("recieve unified push")
 
+	return nil
+}
+
+// checkServer - background job
+func (s *XMPPService) checkServer() error {
+	domain := s.session.LocalAddr().Domain()
+	log.Infof("your instant is %s - check running", domain)
+	info, err := disco.GetInfo(context.TODO(), "", domain, s.session)
+	if err != nil {
+		return err
+	}
+	// check if server support msgoffline
+	supportMSGOffline := false
+	for _, f := range info.Features {
+		if f.Var == "msgoffline" {
+			supportMSGOffline = true
+			break
+		}
+	}
+	if !supportMSGOffline {
+		log.Warn("your server does not support offline messages (XEP-0160) - it is need to deliever messages later, if this distributer has current no connection")
+	}
 	return nil
 }
 
