@@ -255,9 +255,16 @@ func (s *XMPPService) Register(appID, appToken string) (string, string, error) {
 		return "", "xmpp unable recv iq to gateway", err
 	}
 	if endpoint := iqRegister.Register.Endpoint; endpoint != nil {
-		logger.WithField("endpoint", endpoint.Body).Info("success")
+		logger = logger.WithField("endpoint", endpoint.Body)
 		// update Endpoint
 		conn := s.store.NewConnectionWithToken(appID, appToken, publicToken, endpoint.Body)
+		if conn != nil {
+			errStr := "error to store public token"
+			err = errors.New(errStr)
+			logger.WithField("error", err).Error("unable to register")
+			return "", errStr, err
+		}
+		logger.Info("success")
 		return conn.Endpoint, "", nil
 	}
 	errStr := "Unknown Error"
@@ -270,13 +277,23 @@ func (s *XMPPService) Register(appID, appToken string) (string, string, error) {
 }
 
 // Unregister handler of DBUS Distribution
-func (xs *XMPPService) Unregister(token string) {
-	conn, _ := xs.store.DeleteConnection(token)
-	log.WithFields(map[string]interface{}{
+func (s *XMPPService) Unregister(appToken string) {
+	logger := log.WithFields(map[string]interface{}{
+		"appToken": appToken,
+	})
+	conn, err := s.store.DeleteConnection(appToken)
+	if err != nil {
+		log.WithField("error", err).Error("delete connection on storage")
+		return
+	}
+	logger = logger.WithFields(map[string]interface{}{
 		"appID":       conn.AppID,
-		"appToken":    conn.AppToken,
 		"publicToken": conn.PublicToken,
 		"endpoint":    conn.Endpoint,
-	}).Info("distributor-unregister")
-	_ = xs.dbus.NewConnector(conn.AppID).Unregistered(conn.AppToken)
+	})
+	if err = s.dbus.NewConnector(conn.AppID).Unregistered(conn.AppToken); err != nil {
+		logger.WithField("error", err).Error("send unregister per dbus ")
+		return
+	}
+	logger.Info("distributor-unregister")
 }
