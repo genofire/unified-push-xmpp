@@ -43,7 +43,7 @@ func (s *XMPPService) Run(dbus *distributor.DBus, store *storage.Storage) error 
 	s.dbus = dbus
 	s.store = store
 	j := jid.MustParse(s.Login)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*10))
 	defer cancel()
 	if s.session, err = xmpp.DialClientSession(
 		ctx, j,
