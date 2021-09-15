@@ -10,24 +10,24 @@ import (
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp"
 	"mellium.im/xmpp/component"
+	"mellium.im/xmpp/disco"
+	"mellium.im/xmpp/disco/info"
 	"mellium.im/xmpp/jid"
 	"mellium.im/xmpp/mux"
+	"mellium.im/xmpp/ping"
 	"mellium.im/xmpp/stanza"
 
 	"dev.sum7.eu/genofire/unified-push-xmpp/messages"
 )
 
 type XMPPService struct {
-	Addr   string `toml:"address"`
-	JID    string `toml:"jid"`
-	Secret string `toml:"secret"`
-	// hidden here for beautiful config file
-	EndpointURL string    `toml:"-"`
-	JWTSecret   JWTSecret `toml"-"`
-	session     *xmpp.Session
+	Addr    string `toml:"address"`
+	JID     string `toml:"jid"`
+	Secret  string `toml:"secret"`
+	session *xmpp.Session
 }
 
-func (s *XMPPService) Run() error {
+func (s *XMPPService) Run(jwt JWTSecret, endpoint string) error {
 	var err error
 	j := jid.MustParse(s.JID)
 	ctx := context.TODO()
@@ -53,17 +53,94 @@ func (s *XMPPService) Run() error {
 	}()
 	log.Infof("connected with %s", s.session.LocalAddr())
 	return s.session.Serve(mux.New(
-		// register - get + set
-		mux.IQFunc(stanza.SetIQ, xml.Name{Local: messages.LocalRegister, Space: messages.Space}, s.handleRegister),
-		mux.IQFunc(stanza.GetIQ, xml.Name{Local: messages.LocalRegister, Space: messages.Space}, s.handleRegister),
-		// unregister - get + set
-		mux.IQFunc(stanza.SetIQ, xml.Name{Local: messages.LocalUnregister, Space: messages.Space}, s.handleUnregister),
-		mux.IQFunc(stanza.GetIQ, xml.Name{Local: messages.LocalUnregister, Space: messages.Space}, s.handleUnregister),
-		// mux.IQFunc("", xml.Name{}, s.handleDisco),
+		disco.Handle(),
+		ping.Handle(),
+		XMPPUpHandle(jwt, endpoint),
 	))
 }
 
-func (s *XMPPService) handleRegister(iq stanza.IQ, t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
+// SendMessage of an UP Notification
+func (s *XMPPService) SendMessage(to jid.JID, publicToken, content string) error {
+	log.WithFields(map[string]interface{}{
+		"to":          to.String(),
+		"publicToken": publicToken,
+	}).Debug("forward message to xmpp")
+	return s.session.Encode(context.TODO(), messages.Message{
+		Message: stanza.Message{
+			To:   to,
+			From: jid.MustParse(s.JID),
+			// Type: stanza.ChatMessage,
+			Type: stanza.NormalMessage,
+		},
+		PublicToken: publicToken,
+		Body:        content,
+	})
+}
+
+// XMPPUpHandler struct
+// for handling UnifiedPush specifical requests
+type XMPPUpHandler struct {
+	jwtSecret JWTSecret
+	endpoint  string
+}
+
+// XMPPUpHandle - setup UnfiedPush handler to mux
+func XMPPUpHandle(jwt JWTSecret, endpoint string) mux.Option {
+	return func(m *mux.ServeMux) {
+		s := &XMPPUpHandler{jwtSecret: jwt, endpoint: endpoint}
+		// register - get + set - need direct handler (not IQFunc) to bind ForIdentities and ForFeatures to disco
+		mux.IQ(stanza.SetIQ, xml.Name{Local: messages.LocalRegister, Space: messages.Space}, s)(m)
+		mux.IQ(stanza.GetIQ, xml.Name{Local: messages.LocalRegister, Space: messages.Space}, s)(m)
+		// unregister - get + set
+		mux.IQFunc(stanza.SetIQ, xml.Name{Local: messages.LocalUnregister, Space: messages.Space}, s.handleUnregister)(m)
+		mux.IQFunc(stanza.GetIQ, xml.Name{Local: messages.LocalUnregister, Space: messages.Space}, s.handleUnregister)(m)
+	}
+}
+
+var (
+	upIdentity = info.Identity{
+		Category: "pubsub",
+		Type:     "push",
+		Name:     "Unified Push over XMPP",
+	}
+	upFeature = info.Feature{Var: messages.Space}
+)
+
+// ForIdentities disco handler
+func (h *XMPPUpHandler) ForIdentities(node string, f func(info.Identity) error) error {
+	if node != "" {
+		log.Debugf("response disco feature for %s", node)
+		return nil
+	}
+	var err error
+	err = f(upIdentity)
+	if err != nil {
+		return err
+	}
+	log.Debug("response disco identity")
+	return nil
+}
+
+// ForFeatures disco handler
+func (h *XMPPUpHandler) ForFeatures(node string, f func(info.Feature) error) error {
+	if node != "" {
+		log.Debugf("response disco feature for %s", node)
+		return nil
+	}
+	var err error
+	err = f(upFeature)
+	if err != nil {
+		return err
+	}
+	log.Debug("response disco feature")
+	return nil
+}
+
+// HandleIQ - handleRegister for UnifiedPush request
+func (h *XMPPUpHandler) HandleIQ(iq stanza.IQ, t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
+	if start.Name.Local != "register" || start.Name.Space != messages.Space {
+		return nil
+	}
 	reply := messages.RegisterIQ{
 		IQ: stanza.IQ{
 			ID:   iq.ID,
@@ -92,19 +169,21 @@ func (s *XMPPService) handleRegister(iq stanza.IQ, t xmlstream.TokenReadEncoder,
 		reply.Register.Error = &messages.ErrorData{Body: "no token"}
 		return nil
 	}
-	endpointToken, err := s.JWTSecret.Generate(iq.From, publicToken)
+	endpointToken, err := h.jwtSecret.Generate(iq.From, publicToken)
 	if err != nil {
 		log.Errorf("unable entpointToken generation: %v", err)
 		reply.Register.Error = &messages.ErrorData{Body: "endpointToken error on gateway"}
 		return nil
 	}
-	endpoint := s.EndpointURL + "/UP?token=" + endpointToken
+	endpoint := h.endpoint + "/UP?token=" + endpointToken
 	reply.IQ.Type = stanza.ResultIQ
 	reply.Register.Endpoint = &messages.EndpointData{Body: endpoint}
 	log.Debugf("generate respone: %v", endpoint)
 	return nil
 }
-func (s *XMPPService) handleUnregister(iq stanza.IQ, t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
+
+// handleUnregister for UnifiedPush request
+func (h *XMPPUpHandler) handleUnregister(iq stanza.IQ, t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
 	reply := messages.UnregisterIQ{
 		IQ: stanza.IQ{
 			ID:   iq.ID,
@@ -122,38 +201,4 @@ func (s *XMPPService) handleUnregister(iq stanza.IQ, t xmlstream.TokenReadEncode
 
 	reply.Unregister.Error = "not implemented"
 	return nil
-}
-
-func (s *XMPPService) handleDisco(iq stanza.IQ, t xmlstream.TokenReadEncoder, start *xml.StartElement) error {
-	reply := stanza.IQ{
-		ID:   iq.ID,
-		Type: stanza.ErrorIQ,
-		From: iq.To,
-		To:   iq.From,
-	}
-	defer func() {
-		if err := t.Encode(reply); err != nil {
-			log.Errorf("sending response: %v", err)
-		}
-	}()
-	log.Debugf("recieved iq: %v", iq)
-	return nil
-}
-
-// SendMessage of an UP Notification
-func (s *XMPPService) SendMessage(to jid.JID, publicToken, content string) error {
-	log.WithFields(map[string]interface{}{
-		"to":          to.String(),
-		"publicToken": publicToken,
-	}).Debug("forward message to xmpp")
-	return s.session.Encode(context.TODO(), messages.Message{
-		Message: stanza.Message{
-			To:   to,
-			From: jid.MustParse(s.JID),
-			// Type: stanza.ChatMessage,
-			Type: stanza.NormalMessage,
-		},
-		PublicToken: publicToken,
-		Body:        content,
-	})
 }

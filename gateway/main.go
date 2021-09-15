@@ -52,12 +52,8 @@ func main() {
 		DisableTimestamp: !config.Log.Timestamp,
 	})
 
-	// just for more beautiful config file - jere
-	config.XMPP.EndpointURL = config.EndpointURL
-	config.XMPP.JWTSecret = config.JWTSecret
-
 	go func() {
-		if err := config.XMPP.Run(); err != nil {
+		if err := config.XMPP.Run(config.JWTSecret, config.EndpointURL); err != nil {
 			log.Panicf("startup xmpp: %v", err)
 		}
 	}()
