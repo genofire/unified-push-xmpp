@@ -14,7 +14,7 @@ func Post(r *gin.Engine, ws *web.Service, xmpp *XMPPService, jwtsecret JWTSecret
 		to, publicToken, err := jwtsecret.Read(c.Query("token"))
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, web.HTTPError{
-				Message: "jwt token unauthoried - or not given",
+				Message: "jwt token unauthorized - or not given",
 				Error:   err.Error(),
 			})
 			return

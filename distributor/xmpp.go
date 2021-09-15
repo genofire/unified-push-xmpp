@@ -143,7 +143,7 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 		logger.Errorf("Error send unified push: %q", err)
 		return nil
 	}
-	logger.Infof("recieve unified push")
+	logger.Infof("receive unified push")
 
 	return nil
 }

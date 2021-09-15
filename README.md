@@ -1,11 +1,11 @@
 # UnifiedPush over XMPP
 
-[UnifiedPush](https://unifiedpush.org/) is an specification how push notifications delivered between application server and application.
-This is an implementation of the UnifiedPush specifications to delivere push notification over XMPP. 
+[UnifiedPush](https://unifiedpush.org/) is an specification how push notifications delieveries between application server and application.
+This is an implementation of the UnifiedPush specifications to delievere push notification over XMPP. 
 
 In this project has following components:
 - **Gateway** (also called an Push Provider or [Server](https://unifiedpush.org/spec/server/)) which could be registered as an XMPP Component on an Server
-- **Distributor** for Linux using the [D-Bus Specification](https://unifiedpush.org/spec/dbus/) which implement an very small XMPP-Client to recieve the push notifications
+- **Distributor** for Linux using the [D-Bus Specification](https://unifiedpush.org/spec/dbus/) which implement an very small XMPP-Client to receive the push notifications
 
 ## XMPP Messages
 
@@ -54,7 +54,7 @@ For the push notification it-self the origin `<message/>` is used with following
 </message>
 ```
 
-The message sender `from` should be validated from distributor, for not recieving invalid or manipulated push Messages.
+The message sender `from` should be validated from distributor, for not receiving invalid or manipulated push Messages.
 
 ## Wordings
 

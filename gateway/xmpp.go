@@ -154,7 +154,7 @@ func (h *XMPPUpHandler) HandleIQ(iq stanza.IQ, t xmlstream.TokenReadEncoder, sta
 			log.Errorf("sending register response: %v", err)
 		}
 	}()
-	log.Infof("recieved iq: %v", iq)
+	log.Infof("received iq: %v", iq)
 
 	tokenData := messages.TokenData{}
 	err := xml.NewTokenDecoder(t).Decode(&tokenData)
@@ -178,7 +178,7 @@ func (h *XMPPUpHandler) HandleIQ(iq stanza.IQ, t xmlstream.TokenReadEncoder, sta
 	endpoint := h.endpoint + "/UP?token=" + endpointToken
 	reply.IQ.Type = stanza.ResultIQ
 	reply.Register.Endpoint = &messages.EndpointData{Body: endpoint}
-	log.Debugf("generate respone: %v", endpoint)
+	log.Debugf("generate response: %v", endpoint)
 	return nil
 }
 
