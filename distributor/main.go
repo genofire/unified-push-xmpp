@@ -7,6 +7,7 @@ import (
 
 	"dev.sum7.eu/genofire/golang-lib/file"
 	"github.com/bdlm/log"
+	"github.com/bdlm/std/logger"
 	"unifiedpush.org/go/np2p_dbus/distributor"
 	"unifiedpush.org/go/np2p_dbus/storage"
 )
@@ -37,8 +38,12 @@ func defaultPath(given, filename string) string {
 
 func main() {
 	configPath := ""
+	loglevel := 40
 	flag.StringVar(&configPath, "c", configPath, "path to configuration file")
+	flag.IntVar(&loglevel, "l", loglevel, "loglevel")
 	flag.Parse()
+
+	log.SetLevel(logger.Level(loglevel))
 
 	config := &configData{}
 	configPath = defaultPath(configPath, "config.toml")
