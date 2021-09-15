@@ -61,7 +61,7 @@ func main() {
 	dbus = distributor.NewDBus("org.unifiedpush.Distributor.xmpp")
 	dbus.StartHandling(&config.XMPP)
 
-	log.Info("startup")
+	log.Debug("startup ...")
 	if err := config.XMPP.Run(dbus, store); err != nil {
 		log.Errorf("startup xmpp: %v", err)
 	}
