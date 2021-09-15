@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.3.0
 	mellium.im/sasl v0.2.1
 	mellium.im/xmlstream v0.15.3-0.20210221202126-7cc1407dad4c
-	mellium.im/xmpp v0.19.0
+	mellium.im/xmpp v0.19.1-0.20210916033628-404b735d69e5
 	unifiedpush.org/go/np2p_dbus v0.0.0-20210916020553-6eec6f305585
 )
 
@@ -35,5 +35,3 @@ require (
 )
 
 replace dev.sum7.eu/genofire/unified-push-xmpp/messages => ../messages
-
-replace mellium.im/xmpp => ../../../../mellium.im/xmpp

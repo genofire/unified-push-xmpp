@@ -2,7 +2,7 @@ module dev.sum7.eu/genofire/unified-push-xmpp/messages
 
 go 1.17
 
-require mellium.im/xmpp v0.19.0
+require mellium.im/xmpp v0.19.1-0.20210916033628-404b735d69e5
 
 require (
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect

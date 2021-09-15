@@ -3,15 +3,15 @@ module dev.sum7.eu/genofire/unified-push-xmpp/gateway
 go 1.17
 
 require (
-	dev.sum7.eu/genofire/golang-lib v0.0.0-20210912204316-9b2fe62df536
-	dev.sum7.eu/genofire/unified-push-xmpp/messages v0.0.0-20210914093612-4a88e1d4a772
+	dev.sum7.eu/genofire/golang-lib v0.0.0-20210916001325-87131021f8f8
+	dev.sum7.eu/genofire/unified-push-xmpp/messages v0.0.0-20210915230443-057f8045edfe
 	github.com/bdlm/log v0.1.20
 	github.com/bdlm/std v1.0.1
 	github.com/gin-gonic/gin v1.7.4
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/stretchr/testify v1.7.0
 	mellium.im/xmlstream v0.15.3-0.20210221202126-7cc1407dad4c
-	mellium.im/xmpp v0.19.0
+	mellium.im/xmpp v0.19.1-0.20210916033628-404b735d69e5
 )
 
 require (
@@ -33,13 +33,13 @@ require (
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
-	github.com/jackc/pgconn v1.8.1 // indirect
+	github.com/jackc/pgconn v1.10.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgproto3/v2 v2.0.6 // indirect
+	github.com/jackc/pgproto3/v2 v2.1.1 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
-	github.com/jackc/pgtype v1.7.0 // indirect
-	github.com/jackc/pgx/v4 v4.11.0 // indirect
+	github.com/jackc/pgtype v1.8.1 // indirect
+	github.com/jackc/pgx/v4 v4.13.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -56,10 +56,10 @@ require (
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/ugorji/go/codec v1.2.6 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
+	golang.org/x/crypto v0.0.0-20210915214749-c084706c2272 // indirect
 	golang.org/x/mod v0.5.0 // indirect
 	golang.org/x/net v0.0.0-20210913180222-943fd674d43e // indirect
-	golang.org/x/sys v0.0.0-20210910150752-751e447fb3d0 // indirect
+	golang.org/x/sys v0.0.0-20210915083310-ed5796bab164 // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.5 // indirect
@@ -68,7 +68,7 @@ require (
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	gorm.io/driver/postgres v1.1.0 // indirect
+	gorm.io/driver/postgres v1.1.1 // indirect
 	gorm.io/gorm v1.21.15 // indirect
 	gorm.io/plugin/prometheus v0.0.0-20210820101226-2a49866f83ee // indirect
 	mellium.im/reader v0.1.0 // indirect
@@ -76,5 +76,3 @@ require (
 )
 
 replace dev.sum7.eu/genofire/unified-push-xmpp/messages => ../messages
-
-replace mellium.im/xmpp => ../../../../mellium.im/xmpp
