@@ -1,0 +1,9 @@
+pipeline:
+  lint:
+    image: golang:latest
+    group: lint
+    commands:
+      - ./.ci/check-testfiles
+      - ./.ci/check-gofmt
+      - go install github.com/client9/misspell/cmd/misspell@latest
+      - misspell -error .

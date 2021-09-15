@@ -1,4 +1,7 @@
 # UnifiedPush over XMPP
+[![DroneCI](https://ci.sum7.eu/api/badges/genofire/unified-push-xmpp/status.svg?branch=main)](https://ci.sum7.eu/genofire/unified-push-xmpp)
+[![Go Report Card](https://goreportcard.com/badge/dev.sum7.eu/genofire/unified-push-xmpp)](https://goreportcard.com/report/dev.sum7.eu/genofire/unified-push-xmpp)
+[![Go Reference](https://pkg.go.dev/badge/dev.sum7.eu/genofire/unified-push-xmpp.svg)](https://pkg.go.dev/dev.sum7.eu/genofire/unified-push-xmpp)
 
 [UnifiedPush](https://unifiedpush.org/) is an specification how push notifications delieveries between application server and application.
 This is an implementation of the UnifiedPush specifications to delievere push notification over XMPP. 

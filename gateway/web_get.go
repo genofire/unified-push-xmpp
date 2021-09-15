@@ -1,14 +1,15 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 
 	"dev.sum7.eu/genofire/golang-lib/web"
 )
 
 type jsonDiscovery struct {
-	Unifiedpush jsonUP `json:"unifiedpush"`
+	UnifiedPush jsonUP `json:"unifiedpush"`
 }
 type jsonUP struct {
 	Version int `json:"version"`

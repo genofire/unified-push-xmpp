@@ -1,0 +1,30 @@
+# need just for gateways webtest ;(
+services:
+  database:
+     image: cockroachdb/cockroach:latest
+     commands:
+      - cockroach start-single-node --insecure
+
+matrix:
+  COMPONENT:
+  - messages
+  - gateway
+  - distributor
+
+pipeline:
+  test-coverage:
+    image: golang:latest
+    group: test
+    commands:
+      - cd ${COMPONENT}
+      - go get -d -t ./...
+      - go test -ldflags "-X dev.sum7.eu/genofire/golang-lib/web/webtest.DBConnection=postgres://root:root@database:26257/defaultdb?sslmode=disable" $(go list ./... | grep -v /vendor/) -v -failfast -p 1 -coverprofile .testCoverage.txt
+      - go tool cover -func=".testCoverage.txt"
+
+  test-race:
+    image: golang:latest
+    group: test-race
+    commands:
+      - cd ${COMPONENT}
+      - go get -d -t ./...
+      - go test -ldflags "-X dev.sum7.eu/genofire/golang-lib/web/webtest.DBConnection=postgres://root:root@database:26257/defaultdb?sslmode=disable" $(go list ./... | grep -v /vendor/) -race
