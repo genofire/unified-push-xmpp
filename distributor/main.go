@@ -41,7 +41,15 @@ func main() {
 	flag.Parse()
 
 	config := &configData{}
-	if err := file.ReadTOML(defaultPath(configPath, "config.toml"), config); err != nil {
+	configPath = defaultPath(configPath, "config.toml")
+	if err := file.ReadTOML(configPath, config); err != nil {
+		if os.IsNotExist(err) {
+			config.XMPP.Gateway = "up.chat.sum7.eu"
+			if err := file.SaveTOML(configPath, config); err != nil {
+				log.Panicf("save example config file: %s", err)
+			}
+			log.Panicf("open config file, we generate one here %s", configPath)
+		}
 		log.Panicf("open config file: %s", err)
 	}
 
