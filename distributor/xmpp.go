@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/bdlm/log"
-	"github.com/google/uuid"
 	"mellium.im/sasl"
 	"mellium.im/xmlstream"
 	"mellium.im/xmpp"
@@ -114,11 +113,6 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 		log.WithField("msg", msg).Errorf("error decoding message: %q", err)
 		return nil
 	}
-	from := msgHead.From.Bare().String()
-	if from != s.gateway.String() {
-		log.WithField("from", from).Info("message not from gateway, that is no notification")
-		return nil
-	}
 
 	if msg.Body == "" || msg.PublicToken == "" {
 		log.Infof("empty: %v", msgHead)
@@ -132,6 +126,11 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 	conn := s.store.GetConnectionbyPublic(msg.PublicToken)
 	if conn == nil {
 		logger.Warnf("no appID and appToken found for publicToken")
+		return nil
+	}
+	from := msgHead.From.String()
+	if from != conn.Settings {
+		log.WithField("from", from).Info("message not from gateway, that is no notification")
 		return nil
 	}
 	logger = logger.WithFields(map[string]interface{}{
@@ -224,19 +223,25 @@ func (s *XMPPService) testAndUseGateway(address jid.JID) error {
 
 // Register handler of DBUS Distribution
 func (s *XMPPService) Register(appID, appToken string) (string, string, error) {
-	publicToken := uuid.New().String()
 	logger := log.WithFields(map[string]interface{}{
-		"appID":       appID,
-		"appToken":    appToken,
-		"publicToken": publicToken,
+		"appID":    appID,
+		"appToken": appToken,
 	})
+	conn := s.store.NewConnection(appID, appToken, s.gateway.String())
+	if conn == nil {
+		errStr := "error to store public token"
+		err := errors.New(errStr)
+		logger.WithField("error", err).Error("unable to register")
+		return "", errStr, err
+	}
+	logger = logger.WithField("publicToken", conn.PublicToken)
 	iq := messages.RegisterIQ{
 		IQ: stanza.IQ{
 			Type: stanza.SetIQ,
 			To:   s.gateway,
 		},
 	}
-	iq.Register.Token = &messages.TokenData{Body: publicToken}
+	iq.Register.Token = &messages.TokenData{Body: conn.PublicToken}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Millisecond*500))
 	defer cancel()
 	t, err := s.session.EncodeIQ(ctx, iq)
@@ -256,17 +261,8 @@ func (s *XMPPService) Register(appID, appToken string) (string, string, error) {
 		return "", "xmpp unable recv iq to gateway", err
 	}
 	if endpoint := iqRegister.Register.Endpoint; endpoint != nil {
-		logger = logger.WithField("endpoint", endpoint.Body)
-		// update Endpoint
-		conn := s.store.NewConnectionWithToken(appID, appToken, publicToken, endpoint.Body)
-		if conn == nil {
-			errStr := "error to store public token"
-			err = errors.New(errStr)
-			logger.WithField("error", err).Error("unable to register")
-			return "", errStr, err
-		}
-		logger.Info("success")
-		return conn.Endpoint, "", nil
+		logger.WithField("endpoint", endpoint.Body).Info("success")
+		return endpoint.Body, "", nil
 	}
 	errStr := "Unknown Error"
 	if errr := iqRegister.Register.Error; errr != nil {
@@ -290,7 +286,7 @@ func (s *XMPPService) Unregister(appToken string) {
 	logger = logger.WithFields(map[string]interface{}{
 		"appID":       conn.AppID,
 		"publicToken": conn.PublicToken,
-		"endpoint":    conn.Endpoint,
+		"gateway":     conn.Settings,
 	})
 	if err = s.dbus.NewConnector(conn.AppID).Unregistered(conn.AppToken); err != nil {
 		logger.WithField("error", err).Error("send unregister per dbus ")

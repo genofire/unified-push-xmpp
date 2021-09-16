@@ -700,6 +700,7 @@ gopkg.in/go-playground/assert.v1 v1.2.1/go.mod h1:9RXL0bg/zibRAgZUYszZSwO/z8Y/a8
 gopkg.in/go-playground/validator.v9 v9.29.1/go.mod h1:+c9/zcJMFNgbLvly1L1V+PpxWdVbfP1avr/N00E2vyQ=
 gopkg.in/inconshreveable/log15.v2 v2.0.0-20180818164646-67afb5ed74ec/go.mod h1:aPpfJ7XW+gOuirDoZ8gHhLh3kZ1B08FtV2bbmy7Jv3s=
 gopkg.in/ini.v1 v1.57.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
+gopkg.in/ini.v1 v1.63.1 h1:WlmD2fPTg4maPpRITalGs62TK7VMMtP5E9CHH7aFy6Y=
 gopkg.in/ini.v1 v1.63.1/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
 gopkg.in/mail.v2 v2.3.1/go.mod h1:htwXN1Qh09vZJ1NVKxQqHPBaCBbzKhp5GzuJEA4VJWw=
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
@@ -749,3 +750,5 @@ rsc.io/quote/v3 v3.1.0/go.mod h1:yEA65RcK8LyAZtP9Kv3t0HmxON59tX3rD+tICJqUlj0=
 rsc.io/sampler v1.3.0/go.mod h1:T1hPZKmBbMNahiBKFy5HrXp6adAjACjK9JXDnKaTXpA=
 unifiedpush.org/go/np2p_dbus v0.0.0-20210916020553-6eec6f305585 h1:KVZ5crwEMgSPdxum+abczj/5IWGhE603sPPItqoQDDY=
 unifiedpush.org/go/np2p_dbus v0.0.0-20210916020553-6eec6f305585/go.mod h1:4ug2cMRBjAeOiQVmArby6gg9GH0ZYvb8WXZ+yhrgzlw=
+unifiedpush.org/go/np2p_dbus v0.0.0-20210916024230-0bcac24079b3 h1:zGMxFWjJEnVw11fTHO32WpR2JaqZbDVRT7/IA6IWEc4=
+unifiedpush.org/go/np2p_dbus v0.0.0-20210916024230-0bcac24079b3/go.mod h1:4ug2cMRBjAeOiQVmArby6gg9GH0ZYvb8WXZ+yhrgzlw=
