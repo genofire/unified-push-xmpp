@@ -4,4 +4,7 @@ storage_path = ""
 [xmpp]
 login = "YOUR-ACCOUNT@chat.sum7.eu"
 password = "CHANGEME"
-gateway = "up.chat.sum7.eu"
+# if not configured will try to find one on your instance and fallback to demo-server "up.chat.sum7.eu"
+gateway = ""
+# keep stored gateway of application or register they again on new gateway
+keep_gateway = false
