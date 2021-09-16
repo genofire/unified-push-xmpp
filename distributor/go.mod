@@ -11,7 +11,7 @@ require (
 	mellium.im/sasl v0.2.1
 	mellium.im/xmlstream v0.15.3-0.20210221202126-7cc1407dad4c
 	mellium.im/xmpp v0.19.0
-	unifiedpush.org/go/np2p_dbus v0.0.0-20210916005151-73e6596249b7
+	unifiedpush.org/go/np2p_dbus v0.0.0-20210916020553-6eec6f305585
 )
 
 require (
@@ -29,7 +29,6 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.5 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	gopkg.in/ini.v1 v1.63.1 // indirect
 	gorm.io/driver/sqlite v1.1.5 // indirect
 	gorm.io/gorm v1.21.15 // indirect
 	mellium.im/reader v0.1.0 // indirect

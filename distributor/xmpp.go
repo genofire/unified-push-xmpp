@@ -132,6 +132,7 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 	conn := s.store.GetConnectionbyPublic(msg.PublicToken)
 	if conn == nil {
 		logger.Warnf("no appID and appToken found for publicToken")
+		return nil
 	}
 	logger = logger.WithFields(map[string]interface{}{
 		"appID":    conn.AppID,
@@ -258,7 +259,7 @@ func (s *XMPPService) Register(appID, appToken string) (string, string, error) {
 		logger = logger.WithField("endpoint", endpoint.Body)
 		// update Endpoint
 		conn := s.store.NewConnectionWithToken(appID, appToken, publicToken, endpoint.Body)
-		if conn != nil {
+		if conn == nil {
 			errStr := "error to store public token"
 			err = errors.New(errStr)
 			logger.WithField("error", err).Error("unable to register")
