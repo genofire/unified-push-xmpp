@@ -15,7 +15,7 @@ import (
 var dbus *distributor.DBus
 
 type configData struct {
-	StoragePath string      `toml"storage_path"`
+	StoragePath string      `toml:"storage_path"`
 	XMPP        XMPPService `toml:"xmpp"`
 }
 
