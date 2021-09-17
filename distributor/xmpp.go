@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/bdlm/log"
@@ -112,7 +113,7 @@ func (s *XMPPService) message(msgHead stanza.Message, t xmlstream.TokenReadEncod
 		return nil
 	}
 	from := msgHead.From.String()
-	if from != conn.Settings {
+	if settings := strings.Split(conn.Settings, ":"); len(settings) > 1 && settings[0] == from {
 		log.WithField("from", from).Info("message not from gateway, that is no notification")
 		return nil
 	}
@@ -178,7 +179,7 @@ func (s *XMPPService) selectGateway() {
 	if s.KeepGateway {
 		return
 	}
-	conns := s.store.GetUnequalSettings(s.gateway.String())
+	conns := s.store.GetUnequalSettings(s.gateway.String() + ":" + s.session.LocalAddr().Bare().String())
 	if len(conns) <= 0 {
 		return
 	}
@@ -242,7 +243,7 @@ func (s *XMPPService) Register(appID, appToken string) (string, string, error) {
 		"appID":    appID,
 		"appToken": appToken,
 	})
-	conn := s.store.NewConnection(appID, appToken, s.gateway.String())
+	conn := s.store.NewConnection(appID, appToken, s.gateway.String()+":"+s.session.LocalAddr().Bare().String())
 	if conn == nil {
 		errStr := "error to store public token"
 		err := errors.New(errStr)
