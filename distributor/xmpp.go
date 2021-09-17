@@ -178,7 +178,7 @@ func (s *XMPPService) selectGateway() {
 	if s.KeepGateway {
 		return
 	}
-	conns := s.store.GetUnequalSettings(s.gateway.String())
+	conns := s.store.GetUnequalSettings(s.gateway.String() + s.session.LocalAddr().Bare().String())
 	if len(conns) <= 0 {
 		return
 	}
@@ -242,7 +242,7 @@ func (s *XMPPService) Register(appID, appToken string) (string, string, error) {
 		"appID":    appID,
 		"appToken": appToken,
 	})
-	conn := s.store.NewConnection(appID, appToken, s.gateway.String())
+	conn := s.store.NewConnection(appID, appToken, s.gateway.String()+s.session.LocalAddr().Bare().String())
 	if conn == nil {
 		errStr := "error to store public token"
 		err := errors.New(errStr)
